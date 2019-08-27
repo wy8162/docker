@@ -1,0 +1,33 @@
+{
+  "nodes": {
+    "dockerhost": {
+      ":node": "dockerhost",
+      ":ip": "192.168.56.2",
+      ":host": "dockerhost",
+      "ports": [
+        {
+          ":host": 2200,
+          ":guest": 22,
+          ":id": "ssh"
+        },
+        {
+          ":host": 11521,
+          ":guest": 1521,
+          ":id": "oracledb"
+        },
+        {
+          ":host": 17001,
+          ":guest": 7001,
+          ":id": "wls-listen"
+        },
+        {
+          ":host": 15556,
+          ":guest": 5556,
+          ":id": "wls-nm"
+        }
+      ],
+      ":memory": 6144,
+	  ":cpus": 4
+    }
+  }
+}
