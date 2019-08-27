@@ -1,0 +1,54 @@
+Install Oracle 11gR2 in Centos 6.5
+
+Using Oracle Pre-Install Package
+
+www.oraclecommunity.net/profiles/blogs/how-to-make-automated-oracle-11gr2-installer-for-linux-centos-and
+
+1. Update the yum repository
+   cd /etc/yum.repos.d
+   sudo wget http://public-yum.oracle.com/public-yum-ol6.repo
+   
+2. Install the key
+   https://public-yum.oracle.com/
+   
+   sudo wget http://public-yum.oracle.com/RPM-GPG-KEY-oracle-ol6 -O /etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
+   
+3. Install Oracle PreInstall Package
+   yum -y install oracle-rdbms-server-11gR2-preinstall.x86_64
+   
+   You can search the package this way:
+   
+   yum search oracle
+   
+4. Copy custom.sh to "/etc/profile.d"
+
+5. chmod +x /etc/profile.d/custom.sh
+
+6. Prepare users
+	/usr/sbin/groupadd -g 200 oinstall
+	/usr/sbin/groupadd -g 201 dba
+	/usr/sbin/useradd -m -u 200 -g oinstall -G dba oracle
+	id oracle
+	
+	passwd oracle
+
+7. Create directories
+	$ sudo mkdir -p /opt/app/oracle/product/11.2.0
+	$ sudo chown -R oracle:oinstall /opt/app
+	$ sudo chmod -R 775 /opt/app
+    
+8. Add the following to Oracle user ~/.bash_profile
+	umask 022
+	export TMPDIR=$TMP
+	export ORACLE_BASE=/opt/app/oracle
+	export ORACLE_HOME=$ORACLE_BASE/product/11.2.0/db_1
+	export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib
+	export PATH=$ORACLE_HOME/bin:$PATH
+    
+9. Unzip the software
+    $ pushd /tmp
+    $ unzip linux.x64_11gR2_database_1of2.zip
+	$ unzip linux.x64_11gR2_database_2of2.zip
+    $ popd
+
+10.

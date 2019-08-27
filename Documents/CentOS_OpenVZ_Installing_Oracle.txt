@@ -1,0 +1,482 @@
+Installing Oracle in OpenVZ Container
+
+0. Check Network Setup
+   http://docs.oracle.com/cd/B28359_01/install.111/b32002/pre_install.htm#LADBI225
+   
+   0.1 Configuring Name Resolution
+		To ensure that host names are resolved only through the /etc/hosts file:
+
+		Verify that the /etc/hosts file is used for name resolution. You can do this by checking the hosts file entry in the nsswitch.conf file as follows:
+
+		# cat /etc/nsswitch.conf | grep hosts
+		The output of this command should contain an entry for files.
+
+		Verify that the host name has been set by using the hostname command as follows:
+
+		# hostname
+		The output of this command should be similar to the following:
+
+		myhost.example.com
+		Verify that the domain name has not been set dynamically by using the domainname command as follows:
+
+		# domainname
+		This command should not return any results.
+
+		Verify that the hosts file contains the fully qualified host name by using the following command:
+
+		# cat /etc/hosts 
+		The output of this command should contain an entry for the fully qualified host name and localhost.
+
+		For example:
+
+		127.0.0.1    localhost.localdomain localhost 
+		192.168.100.16  myhost.us.example.com myhost 
+		If the hosts file does not contain the fully qualified host name, then open the file and make the required changes in it.
+
+	0.2 Installing on Multihomed Computers
+	
+		You can install Oracle Database on a multihomed computer. A multihomed computer is associated with multiple IP addresses. This is typically achieved by having multiple network cards on the computer. Each IP address is associated with a host name. In addition, you can set up aliases for the host name. By default, Oracle Universal Installer uses the ORACLE_HOSTNAME environment variable setting to find the host name. If ORACLE_HOSTNAME is not set and you are installing on a computer that has multiple network cards, then Oracle Universal Installer determines the host name by using the first entry in the /etc/hosts file.
+
+		Clients must be able to access the computer either by using this host name or by using aliases for this host name. To verify this, ping the host name from the client computers using the short name (host name only) and the full name (host name and domain name). Both tests must be successful.
+
+		Setting the ORACLE_HOSTNAME Environment Variable
+
+		Use the following procedure to set the ORACLE_HOSTNAME environment variable. For example, if the fully qualified host name is somehost.us.example.com, then enter one of the following commands:
+
+		In Bourne, Bash, or Korn shell:
+
+		$ ORACLE_HOSTNAME=somehost.us.example.com
+		$ export ORACLE_HOSTNAME
+		In C shell:
+
+		% setenv ORACLE_HOSTNAME somehost.us.example.com
+
+1. List of Parameters to Be Tunned
+	http://openvz.org/UBC_parameters_table
+	
+	Name	 		Description
+	Primary parameters
+	numproc	 		Maximum number of processes and kernel-level threads allowed for this container.
+	numtcpsock		Maximum number of TCP sockets.
+	numothersock	Maximum number of non-TCP sockets (local sockets, UDP and other types of sockets).
+	vmguarpages	 	Memory allocation guarantee.
+
+	Secondary parameters
+	kmemsize	 	Size of unswappable kernel memory, allocated allocated for processes in this
+					container.
+	tcpsndbuf	 	Total size of buffers used to send data over TCP network connections.
+	tcprcvbuf	 	Total size of buffers used to temporary store the data coming from TCP network
+					connections.
+	othersockbuf	Total size of UNIX-domain socket buffers, UDP and other datagram protocol send
+					buffers.
+	dgramrcvbuf	 	Receive buffers of UDP and other datagram protocols.
+	oomguarpages	The guaranteed amount of memory for the case the memory is “over-booked”
+					(out-of-memory kill guarantee).
+	privvmpages	 	Memory allocation limit, in pages.
+
+	Auxiliary parameters
+	lockedpages	 	Process pages not allowed to be swapped out (pages locked by mlock(2)).
+	shmpages	 	Total size of shared memory (IPC, shared anonymous mappings and tmpfs objects),
+					in pages.
+	physpages	 	Total number of RAM pages used by processes.
+	numfile	 		Number of open files.
+	numflock	 	Number of file locks.
+	numpty	 		Number of pseudo-terminals.
+	numsiginfo	 	Number of siginfo structures.
+	dcachesize	 	Total size of dentry and inode structures locked in memory.
+	numiptent	 	Number of NETFILTER (IP packet filtering) entries.
+	swappages	 	Amount of swap space to show in container.
+
+2. Preparing the System for Oracle 11g
+
+	2.1 Two Ways to Configure the Parameters
+	
+	2.1.1 Command Line
+		Use the following commands to configure.
+		vzctl set 101 --kmemsize unlimited --save
+		vzctl set 101 --lockedpages unlimited --save
+		vzctl set 101 --privvmpages unlimited --save
+		vzctl set 101 --shmpages unlimited --save
+		vzctl set 101 --numproc unlimited --save
+		vzctl set 101 --numtcpsock unlimited --save
+		vzctl set 101 --numflock unlimited --save
+		vzctl set 101 --numpty unlimited --save
+		vzctl set 101 --numsiginfo unlimited --save
+		vzctl set 101 --tcpsndbuf unlimited --save
+		vzctl set 101 --tcprcvbuf unlimited --save
+		vzctl set 101 --othersockbuf unlimited --save
+		vzctl set 101 --dgramrcvbuf unlimited --save
+		vzctl set 101 --numothersock unlimited --save
+		vzctl set 101 --dcachesize unlimited --save
+		vzctl set 101 --numfile unlimited --save
+		vzctl set 101 --numiptent unlimited --save
+
+	2.1.2 Set the Following Parameters in <CTID>.conf
+		Don't use unlimited instead. The following is roughly the same as the
+		example C in OpenVZ.
+		
+		The complete 101.conf file:
+		
+		#  Copyright (C) 2000-2011, Parallels, Inc. All rights reserved.
+		#
+		#  This program is free software; you can redistribute it and/or modify
+		#  it under the terms of the GNU General Public License as published by
+		#  the Free Software Foundation; either version 2 of the License, or
+		#  (at your option) any later version.
+		#
+		#  This program is distributed in the hope that it will be useful,
+		#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+		#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+		#  GNU General Public License for more details.
+		#
+		#  You should have received a copy of the GNU General Public License
+		#  along with this program; if not, write to the Free Software
+		#  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+		#
+
+		# This config is only valid for decent VSwap-enabled kernel
+		# (version 042stab042 or later).
+
+		# Primary parameters
+		AVNUMPROC="40:120"
+		NUMPROC="120:300"
+		NUMTCPSOCK="200:400"
+		NUMOTHERSOCK="200:400"
+		VMGUARPAGES="1725:102400"
+
+		# Secondary parameters
+		KMEMSIZE="72089600:72089600"
+		TCPSNDBUF="5365760:10485760"
+		TCPRCVBUF="5365760:10485760"
+		OTHERSOCKBUF="1503232:4063232"
+		DGRAMRCVBUF="135168:262144"
+		OOMGUARPAGES="1725:102400"
+
+		# Auxiliary parameters
+		LOCKEDPAGES="4096:4096"
+		SHMPAGES="524288:524288"
+		PRIVVMPAGES="2097152:2097152"
+		NUMFILE="8192:8192"
+		NUMFLOCK="200:220"
+		NUMPTY="64:64"
+		NUMSIGINFO="512:512"
+		DCACHESIZE="8634368:8634368"
+
+		NUMIPTENT="64:64"
+
+		# RAM
+		PHYSPAGES="0:2048M"
+
+		# Swap
+		SWAPPAGES="0:4096M"
+
+		# Disk quota parameters (in form of softlimit:hardlimit)
+		DISKSPACE="20971520:20971520"
+		DISKINODES="200000:220000"
+		QUOTATIME="0"
+
+		# CPU fair scheduler parameter
+		CPUUNITS="1000"
+		VE_ROOT="/vz/root/$VEID"
+		VE_PRIVATE="/vz/private/$VEID"
+		OSTEMPLATE="centos-6-x86_64"
+		ORIGIN_SAMPLE="vswap-256m"
+		ONBOOT="yes"
+		HOSTNAME="oracle.wy8162.com"
+		NAMESERVER="8.8.8.8 8.8.4.4"
+		IP_ADDRESS="192.168.0.101"
+	
+	2.1.3 Check Memory
+		At least 1GB RAM and SWAP of 1.5 times the RAM.
+		
+		[root@oracle /]# grep -i memtotal /proc/meminfo
+		MemTotal:        2097152 kB
+		[root@oracle /]# grep -i swaptotal /proc/meminfo
+		SwapTotal:       4194304 kB
+		
+	2.1.4 Kernel Parameters
+		
+		Put these values in /etc/sysctl.conf in the Host Node.
+		
+			kernel.shmall = 2097152
+			kernel.shmmax = 536870912
+			kernel.shmmni = 4096
+			kernel.sem = 250 32000 100 128
+			fs.file-max = 6815744
+			fs.aio-max-nr = 1048576
+			net.ipv4.ip_local_port_range = 9000 65500
+			net.core.rmem_default=262144
+			net.core.wmem_default=262144
+			net.core.rmem_max=4194304
+			net.core.wmem_max=1048576
+			
+		Then execute on the Hardware Node the following command:
+			/sbin/sysctl -p
+		
+	2.1.5 Shell Limits
+		Edit the file /etc/security/limits.conf:
+		
+		$ sudo nano /etc/security/limits.conf
+		and add the following:
+id oracl
+			
+		Edit /etc/pam.d/login:
+			session required /lib64/security/pam_limits.so
+			session required pam_limits.so
+		
+	2.1.6 Create a new profile /etc/profile.d/custom.sh
+		#!/bin/bash
+
+		if [ $USER = "oracle" ]; then
+		  if [ $SHELL = "/bin/ksh" ]; then
+			ulimit -p 16384
+			ulimit -n 65536
+		  else
+			ulimit -u 16384 -n 65536
+		  fi
+		fi
+	
+	then add execution permissions to profile script:
+		$ sudo chmod +x /etc/profile.d/custom.sh
+	
+3. Install Required Packages
+	yum -y install binutils compat-db gcc gcc-c++ glibc unixODBC \
+                   compat-libstdc++-33-3.2.3 elfutils-libelf-devel \
+                   glibc-common libstdc++ libstdc++-devel gnome-libs make \
+                   pdksh sysstat libaio libaio-devel xscreensaver openmotif21 xorg-x11-xfs \
+                   usbutils urw-fonts shared-mime-info perl-libwww-perl \
+                   perl-XML-Parser perl-URI perl-HTML-Tagset perl-HTML-Parser \
+                   patch lvm2 intltool libIDL libart_lgpl libbonobo xterm \
+                   libcap libcroco libgnomecanvas libexif libgnomecups \
+                   libgnomeprint22 libsoup libwnck libxklavier
+	
+	Check the installation:
+	
+	rpm -q binutils gcc gcc-c++ glibc gnome-libs \
+	libstdc++ libstdc++-devel make pdksh sysstat xscreensaver libaio
+	
+	When install the Oracle and if it complains about some package but newer version is
+	installed, you can just ignore it.
+	
+4. Add Oracle Users
+	vzctl exec 101 /usr/sbin/groupadd oinstall
+	vzctl exec 101 /usr/sbin/groupadd dba
+	vzctl exec 101 /usr/sbin/useradd -m -g oinstall -G dba oracle
+	vzctl exec 101 id oracle
+	
+	vzctl exec 101 passwd oracle
+
+5. Enabling X11 forwarding
+	Refer to "Installing_OpenVZ_in_CentOS62.txt" for details.
+	
+6. Create Directories for Oracle Home/Data and the download directory
+	$ sudo mkdir -p /opt/app/oracle/product/11.2.0
+	$ sudo chown -R oracle:oinstall /opt/app
+	$ sudo chmod -R 775 /opt/app
+	
+7. Add the following to ~/.bash_profile
+    TMP=/tmp; export TMP
+    TMPDIR=$TMP; export TMPDIR
+
+    ORACLE_HOSTNAME=localhost.localdomain; export ORACLE_HOSTNAME
+    ORACLE_UNQNAME=develop; export ORACLE_UNQNAME
+    ORACLE_BASE=/opt/app/oracle; export ORACLE_BASE
+    ORACLE_HOME=$ORACLE_BASE/product/11.2.0/db_1; export ORACLE_HOME
+    ORACLE_SID=develop; export ORACLE_SID
+
+    PATH=/usr/sbin:$PATH; export PATH
+    PATH=$ORACLE_HOME/bin:$PATH; export PATH
+
+    LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib; export LD_LIBRARY_PATH
+    CLASSPATH=$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib; export CLASSPATH
+	
+8. Install Oracle 11gR2
+	$ scp linux.x64_11gR2_database_1of2.zip oracle@SERVER:/tmp
+	$ scp linux.x64_11gR2_database_2of2.zip oracle@SERVER:/tmp
+	on the server run:
+	$ pushd /tmp
+	$ unzip linux.x64_11gR2_database_1of2.zip
+	$ unzip linux.x64_11gR2_database_2of2.zip 
+	$ popd
+	
+	$ cd /tmp/database
+	$ ./runInstaller
+
+	Follow the process like "Centos_Step-by-step_installing_Oracle_on_CentOS 6.pdf".
+
+	Delete the installation files.
+
+9. Backup the Container
+	vzctl stop 101
+	cd /tmp
+	tar czpvf ct101_postOracle11gR2.tar.gz /vz/private/101/ /etc/vz/conf/101.conf /etc/vz/conf/101.mount
+
+10. Configuring Database
+	ssh -Y oracle@oracle
+	
+	netca
+	
+	The results should be:
+	
+		Oracle Net Services Configuration:
+		Configuring Listener:LISTENER
+		Listener configuration complete.
+		Oracle Net Listener Startup:
+			Running Listener Control: 
+			  /opt/app/oracle/product/11.2.0/db_1/bin/lsnrctl start LISTENER
+			Listener Control complete.
+			Listener started successfully.
+		Oracle Net Services configuration successful. The exit code is 0
+		
+	Start listener:
+		$ lsnrctl start LISTENER
+		
+	Stop listener:
+		$ lsnrctl stop  LISTENER
+		
+	Check status:
+		$ lsnrctl status LISTENER
+		$ tnsping localhost 1521
+		
+	NOTE: Remember to configure iptables to allow remote access.
+	
+	Change the .bash_profile. It should be as below:
+	
+		# .bash_profile
+		# Get the aliases and functions if [ -f ~/.bashrc ]; then
+		. ~/.bashrc fi
+		# User specific environment and startup programs PATH=$PATH:$HOME/bin
+		umask 022
+		export TMPDIR=$TMP
+		export ORACLE_BASE=/opt/app/oracle
+		export ORACLE_HOME=$ORACLE_BASE/product/11.2.0/db_1
+		export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib
+		export PATH=$ORACLE_HOME/bin:$PATH
+
+		export ORACLE_SID=develop
+		export ORACLE_HOME_LISTNER=LISTENER
+		
+11. Create a New Database
+		$ dbca
+		
+	Might need to tune the parameters as well.
+	
+11.1 Set the Database in Autostart Mode
+	Edit /etc/oratab
+	
+	Make sure the following line has a 'Y' at the end. This is important. Otherwise,
+	later when run "dbstart $ORACLE_HOME", the database won't be brought up.
+	
+		# This file is used by ORACLE utilities.  It is created by root.sh
+		# and updated by the Database Configuration Assistant when creating
+		# a database.
+
+		# A colon, ':', is used as the field terminator.  A new line terminates
+		# the entry.  Lines beginning with a pound sign, '#', are comments.
+		#
+		# Entries are of the form:
+		#   $ORACLE_SID:$ORACLE_HOME:<N|Y>:
+		#
+		# The first and second fields are the system identifier and home
+		# directory of the database respectively.  The third filed indicates
+		# to the dbstart utility that the database should , "Y", or should not,
+		# "N", be brought up at system boot time.
+		#
+		# Multiple entries with the same $ORACLE_SID are not allowed.
+		#
+		#
+		develop:/opt/app/oracle/product/11.2.0/db_1:Y
+	
+11.2 Finally Starting the Database
+	$ lsnrctl start
+	$ dbstart $ORACLE_HOME
+	$ emctl start dbconsole
+	
+	Commands to stop the database
+	$ lsnrctl stop
+	$ dbshut $ORACLE_HOME
+	$ emctl stop dbconsole
+	
+	Verify if you can connect to the database:
+	
+	$ sqlplus sys@develop AS SYSDBA
+	
+11.3 Setup Autostarting Oracle 11g R2 Database
+	Login as the oracle user (a sudoer) in the server and create the archive
+	/etc/init.d/oracle with the following content:
+	
+		#!/bin/bash
+
+		# oracle: Start/Stop Oracle Database 11g R2
+		#
+		# chkconfig: 345 90 10
+		# description: The Oracle Database Server is an RDBMS created by Oracle Corporation
+		#
+		# processname: oracle
+		#
+		# 1. save this file to /etc/init.d
+		# 2. add it to services: sudo chkconfig --add service_oracle.sh
+		#
+
+		. /etc/rc.d/init.d/functions
+
+		LOCKFILE=/var/lock/subsys/oracle
+		ORACLE_HOME=/opt/app/oracle/product/11.2.0/db_1
+		ORACLE_USER=oracle
+
+		case "$1" in
+		'start')
+		   if [ -f $LOCKFILE ]; then
+			  echo $0 already running.
+			  exit 1
+		   fi
+		   echo -n $"Starting Oracle Database:"
+		   su - $ORACLE_USER -c "$ORACLE_HOME/bin/lsnrctl start"
+		   su - $ORACLE_USER -c "$ORACLE_HOME/bin/dbstart $ORACLE_HOME"
+		   su - $ORACLE_USER -c "$ORACLE_HOME/bin/emctl start dbconsole"
+		   touch $LOCKFILE
+		   ;;
+		'stop')
+		   if [ ! -f $LOCKFILE ]; then
+			  echo $0 already stopping.
+			  exit 1
+		   fi
+		   echo -n $"Stopping Oracle Database:"
+		   su - $ORACLE_USER -c "$ORACLE_HOME/bin/lsnrctl stop"
+		   su - $ORACLE_USER -c "$ORACLE_HOME/bin/dbshut $ORACLE_HOME"
+		   su - $ORACLE_USER -c "$ORACLE_HOME/bin/emctl stop dbconsole"
+		   rm -f $LOCKFILE
+		   ;;
+		'restart')
+		   $0 stop
+		   $0 start
+		   ;;
+		'status')
+		   if [ -f $LOCKFILE ]; then
+			  echo $0 started.
+			  else
+			  echo $0 stopped.
+		   fi
+		   ;;
+		*)
+		   echo "Usage: $0 [start|stop|status]"
+		   exit 1
+		esac
+
+		exit 0
+	
+	First, ensure that the init.d script can be executed manually:
+		$ sudo chmod +x /etc/init.d/oracle
+		$ sudo /etc/init.d/oracle start
+
+	if so, then stop it:
+		$ sudo /etc/init.d/oracle stop
+
+	Use chkconfig to register the init.d script on runlevels 3, 4 and 5:
+		$ sudo chkconfig --add oracle
+		
+	then verify if is marked as on in the runleves 3, 4 and 5:
+		$ chkconfig --list oracle
+		oracle 0:off 1:off 2:off 3:on 4:on 5:on 6:off
+
+	Reboot and enjoy!
